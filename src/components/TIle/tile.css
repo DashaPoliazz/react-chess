@@ -1,0 +1,25 @@
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tile--white {
+  background-color: #f0d9b5;
+}
+.tile--black {
+  background-color: #b58863;
+}
+.tile--selected {
+  background-color: darkgrey;
+}
+.tile__highlighted {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 15px;
+  width: 15px;
+  background-color: blue;
+  border-radius: 100%;
+}
