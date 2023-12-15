@@ -4,7 +4,12 @@ import { COLORS, FIGURE_NAMES, ITile } from "../../types";
 import { Figure } from "../Figure/Figure";
 import { useAppSelector } from "../../hooks/useAppSelector";
 import { useActions } from "../../hooks/useActions";
-import { useState, useEffect } from "react";
+import { getAvailableTiles } from "../../helpers/getAvailableTiles";
+import { getAvailableTilesForKing } from "../../helpers/getAvailableTilesForKing";
+import { availableTurnsToAvoidCheckMate } from "../../helpers/availableTurnsToAvoidCheckmate";
+import { findFigure } from "../../helpers/findFigure";
+import { isKingInCheck } from "../../helpers/isKingInCheck";
+import { getFigureById } from "../../helpers/getFigureById";
 
 type Props = {
   tile: ITile;
@@ -13,6 +18,9 @@ type Props = {
   hoveredTile: ITile | null;
   whoseTurn: COLORS;
   setWhoseTurn: (side: COLORS) => void;
+  isEnemyFigure: boolean;
+  isKingCheck: boolean;
+  kingCheck: COLORS | undefined;
 };
 
 export const Tile = ({
@@ -22,17 +30,123 @@ export const Tile = ({
   hoveredTile,
   whoseTurn,
   setWhoseTurn,
+  isEnemyFigure,
+  isKingCheck,
+  kingCheck,
 }: Props) => {
   // Redux
-  const { selectedTile, tiles } = useAppSelector((state) => state.game);
-  const { setSelectedTile, moveFigure } = useActions();
+  const { selectedTile, tiles, side, winner } = useAppSelector(
+    (state) => state.game
+  );
+  const { setSelectedTile, moveFigure, setWinner } = useActions();
 
   // Handlers
   const handleTileClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (winner) {
+      return;
+    }
+
     setSelectedTile(tile);
 
-    const availableTiles = getAvailableTiles(tiles, tile);
-    setAvailableTiles(availableTiles);
+    const availableTiles: (ITile | null)[] = getAvailableTiles(tiles, tile);
+
+    // if (tile.name && tile.name === FIGURE_NAMES.KING) {
+    //   for (let row = 0; row < 8; row++) {
+    //     for (let col = 0; col < 8; col++) {
+    //       if (
+    //         tiles[row][col].name &&
+    //         tiles[row][col].color &&
+    //         tiles[row][col].color !== whoseTurn
+    //       ) {
+    //         const opponentsTurns = getAvailableTiles(tiles, tiles[row][col]);
+
+    //         availableTiles.forEach((tile, i) => {
+    //           if (tile) {
+    //             const idx = opponentsTurns.findIndex(
+    //               (t) => t.rowIdx === tile.rowIdx && t.colIdx === tile.colIdx
+    //             );
+
+    //             if (idx !== -1) {
+    //               availableTiles[i] = null;
+    //             }
+    //           }
+    //         });
+    //       }
+    //     }
+    //   }
+    // }
+
+    // const filteredTiles = availableTiles.filter(Boolean);
+
+    // if (tile.name && tile.name === FIGURE_NAMES.KING) {
+    //   const availableTiles = getAvailableTilesForKing(tile, tiles);
+    //   setAvailableTiles(availableTiles);
+    // } else {
+    //   setAvailableTiles(filteredTiles as ITile[]);
+    // }
+
+    // Если королю обьявлен шах то нужно сетнуть availableTiles в другое состояние
+    if (kingCheck) {
+      const king = findFigure(FIGURE_NAMES.KING, kingCheck, tiles);
+
+      const [isChecked, figureCheckFrom] = isKingInCheck(king!, tiles);
+      const outs = availableTurnsToAvoidCheckMate(
+        king!,
+        tiles,
+        figureCheckFrom
+      );
+      const availableFigures = [];
+
+      // Click on the king
+      if (tile.name === FIGURE_NAMES.KING && tile.color === kingCheck) {
+        // King can retreate?
+        if (outs.availableMovesForKing.length) {
+          setAvailableTiles(outs.availableMovesForKing);
+          availableFigures.push(tile);
+        }
+      }
+
+      const figuresCanBlockIds = Object.keys(outs.figuresToBlock);
+
+      // Clicked on figure that can block kingCheck
+      console.log(figuresCanBlockIds);
+      if (figuresCanBlockIds.length) {
+        for (const key in outs.figuresToBlock) {
+          if (tile.id === key) {
+            setAvailableTiles(outs.figuresToBlock[key]);
+
+            const figure = getFigureById(key, tiles);
+
+            availableFigures.push(figure);
+          }
+        }
+      }
+
+      // TODO:
+      // Click on figure that can eat a figure the check comes from
+      const figuresCanSaveIds = Object.keys(outs.figuresCanSave);
+
+      if (figuresCanSaveIds.length) {
+        for (const key in outs.figuresCanSave) {
+          if (tile.id === key) {
+            setAvailableTiles(outs.figuresCanSave[key]);
+            const figure = getFigureById(key, tiles);
+            console.log(figure);
+            availableFigures.push(figure);
+          }
+        }
+      }
+
+      const idx = availableFigures.findIndex(
+        (t) => t?.rowIdx === tile.rowIdx && t.colIdx === tile.colIdx
+      );
+
+      if (idx === -1) {
+        setAvailableTiles([]);
+      }
+    } else {
+      setAvailableTiles(availableTiles as ITile[]);
+    }
 
     if (
       hoveredTile &&
@@ -44,276 +158,13 @@ export const Tile = ({
         from: selectedTile,
         to: hoveredTile,
       });
+
+      if (hoveredTile.name === FIGURE_NAMES.KING) {
+        setWinner(selectedTile.color);
+      }
       setAvailableTiles([]);
       setWhoseTurn(whoseTurn === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE);
     }
-  };
-
-  const getAvailableTiles = (tiles: ITile[][], tile: ITile): ITile[] => {
-    const availableTiles: ITile[] = [];
-
-    if (!tile.name) return availableTiles;
-
-    switch (tile.name) {
-      case FIGURE_NAMES.PAWN:
-        return getAvailableTilesForPawn(tile, tiles);
-      case FIGURE_NAMES.ROOK:
-        return getAvailableTilesForRook(tile, tiles);
-      case FIGURE_NAMES.KNIGHT:
-        return getAvailableTilesForKnight(tile, tiles);
-      case FIGURE_NAMES.BISHOP:
-        return getAvailableTilesForBishop(tile, tiles);
-      case FIGURE_NAMES.QUEEN:
-        return getAvailableTilesForQueen(tile, tiles);
-      case FIGURE_NAMES.KING:
-        return getAvailableTilesForKing(tile, tiles);
-
-      default:
-        break;
-    }
-
-    return availableTiles;
-  };
-
-  const getAvailableTilesForPawn = (tile: ITile, tiles: ITile[][]): ITile[] => {
-    const availableTiles: ITile[] = [];
-    const { color, rowIdx, colIdx, isFirstTurn } = tile;
-
-    // White
-    if (color === COLORS.WHITE) {
-      if (rowIdx - 1 < 0) {
-        return availableTiles;
-      }
-
-      const top = tiles[rowIdx - 1][colIdx];
-
-      // Top two tiles
-      if (isFirstTurn) {
-        const topTop = tiles[rowIdx - 2][colIdx];
-
-        if (top && !top.name) {
-          availableTiles.push(top);
-        }
-        if (topTop && !topTop.name) {
-          availableTiles.push(topTop);
-        }
-      } else {
-        if (top && !top.name) {
-          availableTiles.push(top);
-        }
-      }
-
-      // Diagonal tiles
-      const topLeft = tiles[rowIdx - 1][colIdx - 1];
-      const topRight = tiles[rowIdx - 1][colIdx + 1];
-
-      if (topLeft && topLeft.color && topLeft.color !== tile.color) {
-        availableTiles.push(topLeft);
-      }
-      if (topRight && topRight.color && topRight.color !== tile.color) {
-        availableTiles.push(topRight);
-      }
-    }
-    // Black
-    if (color === COLORS.BLACK) {
-      if (rowIdx + 1 >= 8) {
-        return availableTiles;
-      }
-      const top = tiles[rowIdx + 1][colIdx];
-
-      // Top two tiles
-      if (tile.isFirstTurn) {
-        const topTop = tiles[rowIdx + 2][colIdx];
-
-        if (top && !top.name) {
-          availableTiles.push(top);
-        }
-        if (topTop && !topTop.name) {
-          availableTiles.push(topTop);
-        }
-      } else {
-        if (top && !top.name) {
-          availableTiles.push(top);
-        }
-      }
-
-      // Diagonal tiles
-      const topLeft = tiles[rowIdx + 1][colIdx - 1];
-      const topRight = tiles[rowIdx + 1][colIdx + 1];
-
-      if (topLeft && topLeft.color && topLeft.color !== tile.color) {
-        availableTiles.push(topLeft);
-      }
-      if (topRight && topRight.color && topRight.color !== tile.color) {
-        availableTiles.push(topRight);
-      }
-    }
-    return availableTiles;
-  };
-
-  const getAvailableTilesForRook = (tile: ITile, tiles: ITile[][]): ITile[] => {
-    const { rowIdx, colIdx } = tile;
-    const availableTiles: ITile[] = [];
-
-    // Up traverse
-    availableTiles.push(...traverseDirection(tiles, rowIdx, colIdx, -1, 0));
-    // Right traverse
-    availableTiles.push(...traverseDirection(tiles, rowIdx, colIdx, 0, 1));
-    // Down traverse
-    availableTiles.push(...traverseDirection(tiles, rowIdx, colIdx, 1, 0));
-    // Left traverse
-    availableTiles.push(...traverseDirection(tiles, rowIdx, colIdx, 0, -1));
-
-    return availableTiles;
-  };
-
-  const getAvailableTilesForKnight = (
-    tile: ITile,
-    tiles: ITile[][]
-  ): ITile[] => {
-    const availableTiles: ITile[] = [];
-
-    const possibleMoves = [
-      { row: -2, col: -1 },
-      { row: -2, col: 1 },
-      { row: 2, col: -1 },
-      { row: 2, col: 1 },
-      { row: -1, col: -2 },
-      { row: -1, col: 2 },
-      { row: 1, col: -2 },
-      { row: 1, col: 2 },
-    ];
-
-    for (const move of possibleMoves) {
-      const newRow = tile.rowIdx + move.row;
-      const newCol = tile.colIdx + move.col;
-
-      if (isValidTile(newRow, newCol)) {
-        const newTile = tiles[newRow][newCol];
-
-        if (tiles[newRow][newCol].name) {
-          if (tiles[newRow][newCol].color !== tile.color) {
-            availableTiles.push(newTile);
-          }
-        } else {
-          availableTiles.push(newTile);
-        }
-      }
-    }
-
-    return availableTiles;
-  };
-
-  const getAvailableTilesForBishop = (
-    tile: ITile,
-    tiles: ITile[][]
-  ): ITile[] => {
-    const availableTiles: ITile[] = [];
-    const directions = [
-      { rowDelta: -1, colDelta: -1 },
-      { rowDelta: -1, colDelta: 1 },
-      { rowDelta: 1, colDelta: 1 },
-      { rowDelta: 1, colDelta: -1 },
-    ];
-
-    for (const direction of directions) {
-      let rowIdx = tile.rowIdx + direction.rowDelta;
-      let colIdx = tile.colIdx + direction.colDelta;
-
-      while (isValidTile(rowIdx, colIdx)) {
-        const currentTile = tiles[rowIdx][colIdx];
-
-        if (currentTile.name) {
-          if (currentTile.color !== tile.color) {
-            availableTiles.push(currentTile);
-          }
-
-          break;
-        } else {
-          availableTiles.push(currentTile);
-        }
-
-        rowIdx += direction.rowDelta;
-        colIdx += direction.colDelta;
-      }
-    }
-
-    return availableTiles;
-  };
-
-  const traverseDirection = (
-    tiles: ITile[][],
-    startRow: number,
-    startCol: number,
-    rowIncrement: number,
-    colIncrement: number
-  ): ITile[] => {
-    const availableTiles: ITile[] = [];
-    let rowIdx = startRow + rowIncrement;
-    let colIdx = startCol + colIncrement;
-
-    while (rowIdx >= 0 && rowIdx < 8 && colIdx >= 0 && colIdx < 8) {
-      if (tiles[rowIdx][colIdx].name) {
-        if (tiles[rowIdx][colIdx].color !== tiles[startRow][startCol].color) {
-          availableTiles.push(tiles[rowIdx][colIdx]);
-        }
-        break;
-      } else {
-        availableTiles.push(tiles[rowIdx][colIdx]);
-      }
-
-      rowIdx += rowIncrement;
-      colIdx += colIncrement;
-    }
-
-    return availableTiles;
-  };
-
-  const getAvailableTilesForQueen = (
-    tile: ITile,
-    tiles: ITile[][]
-  ): ITile[] => {
-    const bishopTiles = getAvailableTilesForBishop(tile, tiles);
-    const rookTiles = getAvailableTilesForRook(tile, tiles);
-
-    return rookTiles.concat(bishopTiles);
-  };
-
-  const getAvailableTilesForKing = (tile: ITile, tiles: ITile[][]): ITile[] => {
-    const availableTiles: ITile[] = [];
-    const { rowIdx, colIdx, color } = tile;
-
-    const addTileIfValid = (row: number, col: number) => {
-      if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
-        const targetTile = tiles[row][col];
-        if (!targetTile.name || targetTile.color !== color) {
-          availableTiles.push(targetTile);
-        }
-      }
-    };
-
-    const directions = [
-      { row: -1, col: 0 },
-      { row: -1, col: -1 },
-      { row: -1, col: 1 },
-      { row: 0, col: 1 },
-      { row: 1, col: 1 },
-      { row: 1, col: 0 },
-      { row: 1, col: -1 },
-      { row: 0, col: -1 },
-    ];
-
-    for (const dir of directions) {
-      const newRow = rowIdx + dir.row;
-      const newCol = colIdx + dir.col;
-      addTileIfValid(newRow, newCol);
-    }
-
-    return availableTiles;
-  };
-
-  const isValidTile = (row: number, col: number): boolean => {
-    return row >= 0 && row < 8 && col >= 0 && col < 8;
   };
 
   return (
@@ -326,6 +177,9 @@ export const Tile = ({
           (tile && tile.rowIdx % 2 === 0 && tile.colIdx % 2 === 1) ||
           (tile && tile.rowIdx % 2 === 1 && tile.colIdx % 2 === 0),
         "tile--selected": selectedTile === tile && selectedTile.name,
+        rotate: side === COLORS.BLACK,
+        "tile--red": isEnemyFigure,
+        "tile--checked-king": isKingCheck,
       })}
       onClick={handleTileClick}
       data-index={`${tile.rowIdx}-${tile.colIdx}`}
@@ -333,7 +187,9 @@ export const Tile = ({
       {tile.name && tile.color && (
         <Figure figure={tile.name} color={tile.color} />
       )}
-      {isHighlighted && <div className="tile__highlighted"></div>}
+      {isHighlighted && !isEnemyFigure && (
+        <div className="tile__highlighted"></div>
+      )}
     </div>
   );
 };

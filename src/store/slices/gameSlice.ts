@@ -1,15 +1,19 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { ITile } from "../../types";
+import { COLORS, ITile } from "../../types";
 import { tiles } from "../../helpers/board";
 
 interface IState {
+  winner: COLORS | null;
   selectedTile: ITile | null;
   tiles: ITile[][];
+  side: COLORS;
 }
 
 const initialState: IState = {
+  winner: null,
   selectedTile: null,
   tiles: tiles,
+  side: COLORS.WHITE,
 };
 
 export const gameSlice = createSlice({
@@ -18,6 +22,12 @@ export const gameSlice = createSlice({
   reducers: {
     setSelectedTile: (state, action: PayloadAction<ITile | null>) => {
       state.selectedTile = action.payload;
+    },
+    setWinner: (state, action: PayloadAction<COLORS>) => {
+      state.winner = action.payload;
+    },
+    setSide: (state, action: PayloadAction<COLORS>) => {
+      state.side = action.payload;
     },
     moveFigure: (
       state,

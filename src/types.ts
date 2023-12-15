@@ -5,7 +5,7 @@ export enum COLORS {
 
 export enum FIGURE_NAMES {
   PAWN = "PAWN",
-  ROOK = "ROOT",
+  ROOK = "ROOK",
   KNIGHT = "KNIGHT",
   BISHOP = "BISHOP",
   QUEEN = "QUEEN",

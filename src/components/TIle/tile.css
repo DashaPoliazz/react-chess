@@ -20,6 +20,15 @@
   transform: translate(-50%, -50%);
   height: 15px;
   width: 15px;
-  background-color: blue;
+  background-color: darkgrey;
   border-radius: 100%;
+}
+.rotate {
+  transform: rotate(180deg);
+}
+.tile--red {
+  background-color: crimson;
+}
+.tile--checked-king {
+  background-color: blueviolet;
 }
