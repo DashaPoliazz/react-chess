@@ -1,8 +1,46 @@
 import { COLORS, FIGURE_NAMES, ITile } from "../types";
 import { getAvailableTiles } from "./getAvailableTiles";
-import { isKingInCheck } from "./isKingInCheck";
 import { isKingUnderAttack } from "./isKingUnderAttack";
-import { isTileCovered } from "./isTileCovered";
+
+const addTileToRemove = (
+  availableTiles: (ITile | null)[],
+  rowIdx: number,
+  colIdx: number
+): void => {
+  const idx = availableTiles.findIndex(
+    (tile) => tile?.rowIdx === rowIdx && tile?.colIdx === colIdx
+  );
+
+  if (idx !== -1) {
+    availableTiles[idx] = null;
+  }
+};
+
+const removeTilesInLine = (
+  availableTiles: (ITile | null)[],
+  king: ITile,
+  line: (ITile | null)[]
+): void => {
+  for (const tile of line) {
+    if (tile?.rowIdx === king.rowIdx) {
+      addTileToRemove(availableTiles, king.rowIdx, tile.colIdx);
+    } else if (tile?.colIdx === king.colIdx) {
+      addTileToRemove(availableTiles, tile.rowIdx, king.colIdx);
+    }
+  }
+};
+
+const removeTilesInDiagonal = (
+  availableTiles: (ITile | null)[],
+  king: ITile,
+  diagonal: (ITile | null)[]
+): void => {
+  for (const tile of diagonal) {
+    if (tile) {
+      addTileToRemove(availableTiles, tile.rowIdx, tile.colIdx);
+    }
+  }
+};
 
 export const getAvailableTilesForKing = (
   king: ITile,
@@ -12,7 +50,6 @@ export const getAvailableTilesForKing = (
 
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
-      // Enemy figure
       const tile = tiles[row][col];
 
       if (tile.name && tile.color !== king.color) {
@@ -20,44 +57,32 @@ export const getAvailableTilesForKing = (
 
         for (const availableTileForEnemyFigure of availableTilesForEnemyFigure) {
           const idx = availableTiles.findIndex(
-            (tile) =>
-              tile?.rowIdx === availableTileForEnemyFigure.rowIdx &&
-              tile?.colIdx === availableTileForEnemyFigure.colIdx
+            (t) =>
+              t?.rowIdx === availableTileForEnemyFigure.rowIdx &&
+              t?.colIdx === availableTileForEnemyFigure.colIdx
           );
 
-          // Король может походить на клетку на которую может ходить пешка
-          // Но не может походить на клетку которую под ударом пешки
-          if (tile.name !== FIGURE_NAMES.PAWN) {
-            if (idx !== -1) {
-              availableTiles[idx] = null;
-            }
+          if (tile.name !== FIGURE_NAMES.PAWN && idx !== -1) {
+            availableTiles[idx] = null;
           }
         }
 
-        // Define diagonals for enemy figure
-        // Queen
         if (tile.name === FIGURE_NAMES.QUEEN) {
           if (king.rowIdx === tile.rowIdx) {
-            // Chcking for the same row
-            const idxOftileToRemove = availableTiles.findIndex(
-              (tile) => tile?.rowIdx === king?.rowIdx
-            );
-            availableTiles[idxOftileToRemove] = null;
+            removeTilesInLine(availableTiles, king, tiles[row]);
           } else if (king.colIdx === tile.colIdx) {
-            // Checking for the same column
-            const idxOftileToRemove = availableTiles.findIndex(
-              (tile) => tile?.colIdx === king?.colIdx
-            );
-            availableTiles[idxOftileToRemove] = null;
+            const column = tiles.map((r) => r[col]);
+            removeTilesInLine(availableTiles, king, column);
           } else if (
             Math.abs(king.rowIdx - tile.rowIdx) ===
             Math.abs(king.colIdx - tile.colIdx)
           ) {
-            // Checking for the same diagonal
             const directionRow = Math.sign(king.rowIdx - tile.rowIdx);
             const directionCol = Math.sign(king.colIdx - tile.colIdx);
             let currentRow = tile.rowIdx + directionRow;
             let currentCol = tile.colIdx + directionCol;
+
+            const diagonal: (ITile | null)[] = [];
 
             while (
               currentRow >= 0 &&
@@ -65,52 +90,36 @@ export const getAvailableTilesForKing = (
               currentCol >= 0 &&
               currentCol < 8
             ) {
-              const idxOftileToRemove = availableTiles.findIndex(
-                (t) => t?.rowIdx === currentRow && t?.colIdx === currentCol
-              );
-
-              if (idxOftileToRemove !== -1) {
-                availableTiles[idxOftileToRemove] = null;
-              }
+              diagonal.push(tiles[currentRow][currentCol]);
 
               currentRow += directionRow;
               currentCol += directionCol;
             }
+
+            removeTilesInDiagonal(availableTiles, king, diagonal);
           }
         }
-        // // Rook
+
         if (
-          tile.name === FIGURE_NAMES.ROOK &&
+          (tile.name === FIGURE_NAMES.ROOK ||
+            tile.name === FIGURE_NAMES.BISHOP) &&
           isKingUnderAttack(king, availableTilesForEnemyFigure)
         ) {
           if (king.rowIdx === tile.rowIdx) {
-            // Chcking for the same row
-            const idxOftileToRemove = availableTiles.findIndex(
-              (tile) => tile?.rowIdx === king?.rowIdx
-            );
-            availableTiles[idxOftileToRemove] = null;
+            removeTilesInLine(availableTiles, king, tiles[row]);
           } else if (king.colIdx === tile.colIdx) {
-            // Checking for the same column
-            const idxOftileToRemove = availableTiles.findIndex(
-              (tile) => tile?.colIdx === king?.colIdx
-            );
-            availableTiles[idxOftileToRemove] = null;
-          }
-        }
-        // Bishop
-        if (
-          tile.name === FIGURE_NAMES.BISHOP &&
-          isKingUnderAttack(king, availableTilesForEnemyFigure)
-        ) {
-          if (
+            const column = tiles.map((r) => r[col]);
+            removeTilesInLine(availableTiles, king, column);
+          } else if (
             Math.abs(king.rowIdx - tile.rowIdx) ===
             Math.abs(king.colIdx - tile.colIdx)
           ) {
-            // Checking for the same diagonal
             const directionRow = Math.sign(king.rowIdx - tile.rowIdx);
             const directionCol = Math.sign(king.colIdx - tile.colIdx);
             let currentRow = tile.rowIdx + directionRow;
             let currentCol = tile.colIdx + directionCol;
+
+            const diagonal: (ITile | null)[] = [];
 
             while (
               currentRow >= 0 &&
@@ -118,22 +127,17 @@ export const getAvailableTilesForKing = (
               currentCol >= 0 &&
               currentCol < 8
             ) {
-              const idxOftileToRemove = availableTiles.findIndex(
-                (t) => t?.rowIdx === currentRow && t?.colIdx === currentCol
-              );
-
-              if (idxOftileToRemove !== -1) {
-                availableTiles[idxOftileToRemove] = null;
-              }
+              diagonal.push(tiles[currentRow][currentCol]);
 
               currentRow += directionRow;
               currentCol += directionCol;
             }
+
+            removeTilesInDiagonal(availableTiles, king, diagonal);
           }
         }
-        // Pawn
+
         if (tile.name === FIGURE_NAMES.PAWN) {
-          // Define enemy's pawn
           const availableTilesForPawn: ITile[] = [];
 
           if (tile.color === COLORS.WHITE) {
@@ -141,19 +145,11 @@ export const getAvailableTilesForKing = (
 
             if (tile.rowIdx - 1 >= 0) {
               rowIdx = tile.rowIdx - 1;
-
-              // Checking topLeft
               if (tile.colIdx - 1 >= 0) {
-                if (tiles[rowIdx] && tiles[rowIdx][tile.colIdx - 1]) {
-                  availableTilesForPawn.push(tiles[rowIdx][tile.colIdx - 1]);
-                }
+                availableTilesForPawn.push(tiles[rowIdx][tile.colIdx - 1]);
               }
-
-              // Checking topRight
               if (tile.colIdx + 1 <= 7) {
-                if (tiles[rowIdx] && tiles[rowIdx][tile.colIdx + 1]) {
-                  availableTilesForPawn.push(tiles[rowIdx][tile.colIdx + 1]);
-                }
+                availableTilesForPawn.push(tiles[rowIdx][tile.colIdx + 1]);
               }
             }
           }
@@ -163,28 +159,20 @@ export const getAvailableTilesForKing = (
 
             if (tile.rowIdx + 1 <= 7) {
               rowIdx = tile.rowIdx + 1;
-
-              // Checking bottomLeft
               if (tile.colIdx - 1 >= 0) {
-                if (tiles[rowIdx] && tiles[rowIdx][tile.colIdx - 1]) {
-                  availableTilesForPawn.push(tiles[rowIdx][tile.colIdx - 1]);
-                }
+                availableTilesForPawn.push(tiles[rowIdx][tile.colIdx - 1]);
               }
-
-              // Checking bottomRight
               if (tile.colIdx + 1 <= 7) {
-                if (tiles[rowIdx] && tiles[rowIdx][tile.colIdx + 1]) {
-                  availableTilesForPawn.push(tiles[rowIdx][tile.colIdx + 1]);
-                }
+                availableTilesForPawn.push(tiles[rowIdx][tile.colIdx + 1]);
               }
             }
           }
 
           for (const availableTileForPawn of availableTilesForPawn) {
             const idx = availableTiles.findIndex(
-              (tile) =>
-                tile?.rowIdx === availableTileForPawn.rowIdx &&
-                tile?.colIdx === availableTileForPawn.colIdx
+              (t) =>
+                t?.rowIdx === availableTileForPawn.rowIdx &&
+                t?.colIdx === availableTileForPawn.colIdx
             );
 
             if (idx !== -1) {

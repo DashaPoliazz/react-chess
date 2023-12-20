@@ -229,8 +229,16 @@ const getAvailableTilesForKing = (tile: ITile, tiles: ITile[][]): ITile[] => {
   const addTileIfValid = (row: number, col: number) => {
     if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
       const targetTile = tiles[row][col];
-      const isCovered = isTileCovered(tile, targetTile, tiles);
-      if (!targetTile.name || (targetTile.color !== color && !isCovered)) {
+      // Problem is here
+      // const isCovered = isTileCovered(tile, targetTile, tiles);
+
+      // if (targetTile.name && targetTile.color !== color && !isCovered) {
+      //   availableTiles.push(targetTile);
+      // }
+      if (targetTile.name && targetTile.color !== color) {
+        availableTiles.push(targetTile);
+      }
+      if (!targetTile.name) {
         availableTiles.push(targetTile);
       }
     }
@@ -258,4 +266,70 @@ const getAvailableTilesForKing = (tile: ITile, tiles: ITile[][]): ITile[] => {
 
 const isValidTile = (row: number, col: number): boolean => {
   return row >= 0 && row < 8 && col >= 0 && col < 8;
+};
+
+export const validateAvailableTilesForKing = (
+  availableTilesForKing: ITile[],
+  king: ITile,
+  tiles: ITile[][]
+) => {
+  const copy: (ITile | null)[] = [...availableTilesForKing];
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const tile = tiles[row][col];
+
+      if (king.color !== tile.color) {
+        let unavailableTiles: ITile[] = [];
+
+        if (tile.name === FIGURE_NAMES.PAWN) {
+          if (tile.color === COLORS.WHITE) {
+            let rowIdx = 0;
+
+            if (tile.rowIdx - 1 >= 0) {
+              rowIdx = tile.rowIdx - 1;
+              if (tile.colIdx - 1 >= 0) {
+                unavailableTiles.push(tiles[rowIdx][tile.colIdx - 1]);
+              }
+              if (tile.colIdx + 1 <= 7) {
+                unavailableTiles.push(tiles[rowIdx][tile.colIdx + 1]);
+              }
+            }
+          }
+
+          if (tile.color === COLORS.BLACK) {
+            let rowIdx = 0;
+
+            if (tile.rowIdx + 1 <= 7) {
+              rowIdx = tile.rowIdx + 1;
+              if (tile.colIdx - 1 >= 0) {
+                unavailableTiles.push(tiles[rowIdx][tile.colIdx - 1]);
+              }
+              if (tile.colIdx + 1 <= 7) {
+                unavailableTiles.push(tiles[rowIdx][tile.colIdx + 1]);
+              }
+            }
+          }
+        } else {
+          unavailableTiles = unavailableTiles.concat(
+            getAvailableTiles(tiles, tile)
+          );
+        }
+
+        for (const unavailableTile of unavailableTiles) {
+          const idxToRemove = copy.findIndex(
+            (t) =>
+              t?.rowIdx === unavailableTile.rowIdx &&
+              t?.colIdx === unavailableTile.colIdx
+          );
+
+          if (idxToRemove !== -1) {
+            copy[idxToRemove] = null;
+          }
+        }
+      }
+    }
+  }
+
+  return copy.filter(Boolean) as ITile[];
 };

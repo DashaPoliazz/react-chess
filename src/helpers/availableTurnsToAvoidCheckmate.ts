@@ -11,6 +11,8 @@ export const availableTurnsToAvoidCheckMate = (
   const figuresCanSave = getFiguresToSave(figureCheckFrom, tiles);
   const figuresToBlock = getFiguresToBlock(figureCheckFrom, king, tiles);
 
+  console.log(availableMovesForKing);
+
   return {
     availableMovesForKing,
     figuresCanSave,
@@ -19,30 +21,24 @@ export const availableTurnsToAvoidCheckMate = (
 };
 
 const getFiguresToSave = (figureToEat: ITile, tiles: ITile[][]) => {
-  // { id: tilesCanBeBlocked }
   const res: Record<string, ITile[]> = {};
 
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const tile = tiles[row][col];
-
+  tiles.forEach((row) => {
+    row.forEach((tile) => {
       if (tile.color !== figureToEat.color) {
         const availableTurnsForTile = getAvailableTiles(tiles, tile);
 
         const tileToAttack = availableTurnsForTile.find(
-          (tile) =>
-            tile.rowIdx === figureToEat.rowIdx &&
-            tile.colIdx === figureToEat.colIdx
+          ({ rowIdx, colIdx }) =>
+            rowIdx === figureToEat.rowIdx && colIdx === figureToEat.colIdx
         );
 
-        if (tileToAttack) {
-          if (tile.id) {
-            res[tile.id] = [tileToAttack];
-          }
+        if (tileToAttack && tile.id) {
+          res[tile.id] = [tileToAttack];
         }
       }
-    }
-  }
+    });
+  });
 
   return res;
 };
@@ -59,18 +55,15 @@ const getFiguresToBlock = (
       return rookCheck(figureCheckFrom, king, tiles);
     case FIGURE_NAMES.QUEEN:
       return queenCheck(figureCheckFrom, king, tiles);
+    default:
+      return {};
   }
-
-  return {};
 };
 
 const bishopCheck = (bishop: ITile, enemyKing: ITile, tiles: ITile[][]) => {
   const blockingMoves: ITile[] = [];
-
-  const bishopRow = bishop.rowIdx;
-  const bishopCol = bishop.colIdx;
-  const kingRow = enemyKing.rowIdx;
-  const kingCol = enemyKing.colIdx;
+  const { rowIdx: bishopRow, colIdx: bishopCol } = bishop;
+  const { rowIdx: kingRow, colIdx: kingCol } = enemyKing;
 
   if (Math.abs(bishopRow - kingRow) === Math.abs(bishopCol - kingCol)) {
     const rowDirection = bishopRow < kingRow ? 1 : -1;
@@ -85,36 +78,29 @@ const bishopCheck = (bishop: ITile, enemyKing: ITile, tiles: ITile[][]) => {
     }
   }
 
-  // { id: tilesCanBeBlocked }
   const res: Record<string, ITile[]> = {};
 
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const tile = tiles[row][col];
-
+  tiles.forEach((row) => {
+    row.forEach((tile) => {
       if (tile.color !== bishop.color && tile.name !== FIGURE_NAMES.KING) {
         const availableMoves = getAvailableTiles(tiles, tile);
 
-        for (const availableMove of availableMoves) {
+        availableMoves.forEach((availableMove) => {
           const foundTile = blockingMoves.find(
             (blockingTile) =>
               blockingTile.rowIdx === availableMove.rowIdx &&
               blockingTile.colIdx === availableMove.colIdx
           );
 
-          if (foundTile) {
-            if (tile.id) {
-              if (res[tile.id]) {
-                res[tile.id].push(availableMove);
-              } else {
-                res[tile.id] = [availableMove];
-              }
-            }
+          if (foundTile && tile.id) {
+            res[tile.id] = res[tile.id]
+              ? [...res[tile.id], availableMove]
+              : [availableMove];
           }
-        }
+        });
       }
-    }
-  }
+    });
+  });
 
   return res;
 };
@@ -122,60 +108,47 @@ const bishopCheck = (bishop: ITile, enemyKing: ITile, tiles: ITile[][]) => {
 const rookCheck = (rook: ITile, enemyKing: ITile, tiles: ITile[][]) => {
   const blockingMoves: ITile[] = [];
 
-  // Common row
   if (rook.rowIdx === enemyKing.rowIdx) {
-    let min = Math.min(rook.colIdx, enemyKing.colIdx);
-    let max = Math.max(rook.colIdx, enemyKing.colIdx);
+    const min = Math.min(rook.colIdx, enemyKing.colIdx);
+    const max = Math.max(rook.colIdx, enemyKing.colIdx);
 
     for (let colIdx = min; colIdx < max; colIdx++) {
       blockingMoves.push(tiles[rook.rowIdx][colIdx]);
     }
   }
 
-  // Common diagonal
   if (rook.colIdx === enemyKing.colIdx) {
-    let min = Math.min(rook.rowIdx, enemyKing.rowIdx);
-    let max = Math.max(rook.rowIdx, enemyKing.rowIdx);
-
-    console.log(min, max);
+    const min = Math.min(rook.rowIdx, enemyKing.rowIdx);
+    const max = Math.max(rook.rowIdx, enemyKing.rowIdx);
 
     for (let rowIdx = min; rowIdx < max; rowIdx++) {
       blockingMoves.push(tiles[rowIdx][rook.colIdx]);
     }
   }
 
-  console.log(blockingMoves);
-
-  // { id: tilesCanBeBlocked }
   const res: Record<string, ITile[]> = {};
 
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const tile = tiles[row][col];
-
+  tiles.forEach((row) => {
+    row.forEach((tile) => {
       if (tile.color !== rook.color && tile.name !== FIGURE_NAMES.KING) {
         const availableMoves = getAvailableTiles(tiles, tile);
 
-        for (const availableMove of availableMoves) {
+        availableMoves.forEach((availableMove) => {
           const foundTile = blockingMoves.find(
             (blockingTile) =>
               blockingTile.rowIdx === availableMove.rowIdx &&
               blockingTile.colIdx === availableMove.colIdx
           );
 
-          if (foundTile) {
-            if (tile.id) {
-              if (res[tile.id]) {
-                res[tile.id].push(availableMove);
-              } else {
-                res[tile.id] = [availableMove];
-              }
-            }
+          if (foundTile && tile.id) {
+            res[tile.id] = res[tile.id]
+              ? [...res[tile.id], availableMove]
+              : [availableMove];
           }
-        }
+        });
       }
-    }
-  }
+    });
+  });
 
   return res;
 };

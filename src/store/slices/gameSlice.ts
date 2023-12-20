@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAction, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { COLORS, ITile } from "../../types";
 import { tiles } from "../../helpers/board";
 

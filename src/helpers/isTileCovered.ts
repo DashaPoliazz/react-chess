@@ -1,11 +1,14 @@
 import { COLORS, FIGURE_NAMES, ITile } from "../types";
+import { getAvailableTiles } from "./getAvailableTiles";
 
 export const isTileCovered = (
   tile: ITile,
   tileToCover: ITile,
   tiles: ITile[][]
 ): boolean => {
-  if (!tile.name) return false;
+  if (!tile.name) {
+    return false;
+  }
 
   switch (tile.name) {
     case FIGURE_NAMES.PAWN:
@@ -210,6 +213,8 @@ const getAvailableTilesForQueen = (
   const bishopTiles = getAvailableTilesForBishop(tile, tileToCover, tiles);
   const rookTiles = getAvailableTilesForRook(tile, tileToCover, tiles);
 
+  console.log(bishopTiles, rookTiles);
+
   return bishopTiles || rookTiles;
 };
 
@@ -218,7 +223,7 @@ const getAvailableTilesForKing = (
   tileToCover: ITile,
   tiles: ITile[][]
 ): boolean => {
-  const { rowIdx, colIdx, color } = tile;
+  const { rowIdx, colIdx } = tile;
 
   const canCover = (row: number, col: number) => {
     if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
@@ -259,3 +264,46 @@ const getAvailableTilesForKing = (
 const isValidTile = (row: number, col: number): boolean => {
   return row >= 0 && row < 8 && col >= 0 && col < 8;
 };
+
+// const getAvailableTilesForKing = (
+//   tile: ITile,
+//   tileToCover: ITile,
+//   tiles: ITile[][]
+// ): boolean => {
+//   const { rowIdx, colIdx } = tile;
+
+//   const canCover = (row: number, col: number) => {
+//     if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
+//       const targetTile = tiles[row][col];
+//       if (
+//         targetTile.name &&
+//         targetTile.rowIdx === tileToCover.rowIdx &&
+//         targetTile.colIdx === tileToCover.colIdx
+//       ) {
+//         return true;
+//       }
+//     }
+//   };
+
+//   const directions = [
+//     { row: -1, col: 0 },
+//     { row: -1, col: -1 },
+//     { row: -1, col: 1 },
+//     { row: 0, col: 1 },
+//     { row: 1, col: 1 },
+//     { row: 1, col: 0 },
+//     { row: 1, col: -1 },
+//     { row: 0, col: -1 },
+//   ];
+
+//   for (const dir of directions) {
+//     const newRow = rowIdx + dir.row;
+//     const newCol = colIdx + dir.col;
+
+//     if (canCover(newRow, newCol)) {
+//       return true;
+//     }
+//   }
+
+//   return false;
+// };

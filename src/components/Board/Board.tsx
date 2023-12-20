@@ -6,11 +6,14 @@ import { COLORS, FIGURE_NAMES, ITile } from "../../types";
 import classNames from "classnames";
 import { findFigure } from "../../helpers/findFigure";
 import { isKingInCheck } from "../../helpers/isKingInCheck";
-import { getAvailableTilesForKing } from "../../helpers/getAvailableTilesForKing";
 import { availableTurnsToAvoidCheckMate } from "../../helpers/availableTurnsToAvoidCheckmate";
 import { useActions } from "../../hooks/useActions";
 
 type Props = {};
+
+// TODO:
+// [x] 1. King can move on the tile pawn can cover.
+// [] 2. Figure can't do turn if the check cames after it
 
 const identity = (x: any) => x;
 
@@ -25,6 +28,10 @@ export const Board = (props: Props) => {
   const [whoseTurn, setWhoseTurn] = useState<COLORS>(COLORS.WHITE);
   const [kingCheck, setKingCheck] = useState<COLORS | undefined>(undefined);
   const [hasBeenChecked, setHasBeenChecked] = useState(false);
+  const [hasPlayersMadeTurn, setHasPlayersMadeTurn] = useState({
+    [COLORS.WHITE]: false,
+    [COLORS.BLACK]: false,
+  });
 
   // Refs
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -56,14 +63,18 @@ export const Board = (props: Props) => {
 
     board.addEventListener("mousemove", handler);
 
+    setTimeout(() => {
+      board.classList.add("board--hover");
+    }, 1_000);
+
     return () => {
       board.removeEventListener("mousemove", handler);
     };
-  }, []);
+  }, [tiles]);
 
   useEffect(() => {
     const enemyKing = findFigure(FIGURE_NAMES.KING, whoseTurn, tiles)!;
-    const [isChecked, figureCheckFrom] = isKingInCheck(enemyKing, tiles);
+    const [isChecked] = isKingInCheck(enemyKing, tiles);
 
     if (isChecked) {
       setKingCheck(enemyKing.color);
@@ -80,7 +91,6 @@ export const Board = (props: Props) => {
 
       if (king && kingCheck && hasBeenChecked) {
         const [isChecked, figureCheckFrom] = isKingInCheck(king, tiles);
-        const kingAvailableTiles = getAvailableTilesForKing(king, tiles);
 
         if (!isChecked) {
           return;
@@ -175,6 +185,7 @@ export const Board = (props: Props) => {
             isKingCheck={isKingCheck(tile)}
             setWhoseTurn={setWhoseTurn}
             kingCheck={kingCheck}
+            hasBeenChecked={hasBeenChecked}
           />
         ))
       )}

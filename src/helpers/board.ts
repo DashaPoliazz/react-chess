@@ -273,4 +273,25 @@ export const generateTiles = (): ITile[][] => {
   return tiles;
 };
 
+export const generateTilesAsync = () => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const tiles = [];
+
+      for (let rowIdx = 0; rowIdx < 8; rowIdx++) {
+        const row = [];
+
+        for (let colIdx = 0; colIdx < 8; colIdx++) {
+          const figure = getFigure(rowIdx, colIdx);
+          row.push(figure);
+        }
+
+        tiles.push(row);
+      }
+
+      resolve(tiles);
+    }, 0);
+  });
+};
+
 export const tiles = generateTiles();
