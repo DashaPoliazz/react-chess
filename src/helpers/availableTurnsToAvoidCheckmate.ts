@@ -1,17 +1,18 @@
 import { getAvailableTilesForKing } from "./getAvailableTilesForKing";
-import { FIGURE_NAMES, ITile } from "../types";
+import { COLORS, FIGURE_NAMES, ITile } from "../types";
 import { getAvailableTiles } from "./getAvailableTiles";
+import { getFigureById } from "./getFigureById";
+import { findFigure } from "./findFigure";
 
 export const availableTurnsToAvoidCheckMate = (
   king: ITile,
   tiles: ITile[][],
   figureCheckFrom: ITile
 ) => {
+  // Figure the check come from can't be eated if it's covered
   const availableMovesForKing = getAvailableTilesForKing(king, tiles);
   const figuresCanSave = getFiguresToSave(figureCheckFrom, tiles);
   const figuresToBlock = getFiguresToBlock(figureCheckFrom, king, tiles);
-
-  console.log(availableMovesForKing);
 
   return {
     availableMovesForKing,
@@ -40,7 +41,17 @@ const getFiguresToSave = (figureToEat: ITile, tiles: ITile[][]) => {
     });
   });
 
-  return res;
+  const whiteKing = findFigure(FIGURE_NAMES.KING, COLORS.WHITE, tiles);
+  const blackKing = findFigure(FIGURE_NAMES.KING, COLORS.BLACK, tiles);
+
+  // King can't save itself
+  const formattedResult = Object.fromEntries(
+    Object.entries(res).filter(
+      ([id]) => id !== whiteKing?.id && id !== blackKing?.id
+    )
+  );
+
+  return formattedResult;
 };
 
 const getFiguresToBlock = (

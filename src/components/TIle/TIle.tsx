@@ -13,6 +13,7 @@ import { findFigure } from "../../helpers/findFigure";
 import { isKingInCheck } from "../../helpers/isKingInCheck";
 import { getFigureById } from "../../helpers/getFigureById";
 import { isCheckAfterTurn } from "../../helpers/isCheckAfterTurn";
+import { isTileCovered } from "../../helpers/isTileCovered";
 
 type Props = {
   tile: ITile;
@@ -37,7 +38,6 @@ export const Tile = ({
   isEnemyFigure,
   isKingCheck,
   kingCheck,
-  hasBeenChecked,
 }: Props) => {
   // Redux
   const { selectedTile, tiles, side, winner } = useAppSelector(
@@ -66,12 +66,23 @@ export const Tile = ({
         figureCheckFrom
       );
       const availableFigures = [];
+      const filteredTiles = isTileCovered(figureCheckFrom, tile, tiles)
+        ? outs.availableMovesForKing.filter(
+            (tile) =>
+              tile.rowIdx !== figureCheckFrom.rowIdx &&
+              tile.colIdx !== figureCheckFrom.colIdx
+          )
+        : outs.availableMovesForKing;
 
       // Click on the king
       if (tile.name === FIGURE_NAMES.KING && tile.color === kingCheck) {
+        // King can't eat figure the check come from if it's covered
+
         // King can retreate?
         if (outs.availableMovesForKing.length) {
-          setAvailableTiles(outs.availableMovesForKing);
+          // King can't eat the figure check come from if it's covered
+          setAvailableTiles(filteredTiles);
+
           availableFigures.push(tile);
         }
       }
@@ -100,7 +111,6 @@ export const Tile = ({
           if (tile.id === key) {
             setAvailableTiles(outs.figuresCanSave[key]);
             const figure = getFigureById(key, tiles);
-            console.log(figure);
             availableFigures.push(figure);
           }
         }
@@ -113,6 +123,17 @@ export const Tile = ({
       if (idx === -1) {
         setAvailableTiles([]);
       }
+
+      if (
+        !filteredTiles.length &&
+        !figuresCanBlockIds.length &&
+        !figuresCanSaveIds.length
+      ) {
+        console.log("FILTERED TILES:", filteredTiles);
+        console.log("FIGURES CAN SAVE: ", outs.figuresCanSave);
+        console.log("FIGURES TO BLOCK: ", outs.figuresToBlock);
+        figureCheckFrom.color && setWinner(figureCheckFrom.color);
+      }
     } else {
       if (tile.name === FIGURE_NAMES.KING) {
         const validatedTiles = validateAvailableTilesForKing(
@@ -121,7 +142,6 @@ export const Tile = ({
           tiles
         );
 
-        console.log(validatedTiles);
         setAvailableTiles(validatedTiles as ITile[]);
       } else {
         setAvailableTiles(availableTiles as ITile[]);
@@ -142,7 +162,6 @@ export const Tile = ({
       );
 
       if (isAvailableTurn) {
-        console.log("CHECK AFTER TURN");
         return;
       }
 

@@ -1,5 +1,7 @@
 import { COLORS, FIGURE_NAMES, ITile } from "../types";
+import { findFigure } from "./findFigure";
 import { getAvailableTiles } from "./getAvailableTiles";
+import { isKingInCheck } from "./isKingInCheck";
 import { isKingUnderAttack } from "./isKingUnderAttack";
 
 const addTileToRemove = (
@@ -184,5 +186,7 @@ export const getAvailableTilesForKing = (
     }
   }
 
-  return availableTiles.filter(Boolean) as ITile[];
+  const result = availableTiles.filter(Boolean) as ITile[];
+
+  return result;
 };

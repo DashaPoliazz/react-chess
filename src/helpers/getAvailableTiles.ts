@@ -230,11 +230,11 @@ const getAvailableTilesForKing = (tile: ITile, tiles: ITile[][]): ITile[] => {
     if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
       const targetTile = tiles[row][col];
       // Problem is here
-      // const isCovered = isTileCovered(tile, targetTile, tiles);
+      const isCovered = isTileCovered(tile, targetTile, tiles);
 
-      // if (targetTile.name && targetTile.color !== color && !isCovered) {
-      //   availableTiles.push(targetTile);
-      // }
+      if (targetTile.name && targetTile.color !== color && !isCovered) {
+        availableTiles.push(targetTile);
+      }
       if (targetTile.name && targetTile.color !== color) {
         availableTiles.push(targetTile);
       }

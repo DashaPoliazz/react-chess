@@ -213,8 +213,6 @@ const getAvailableTilesForQueen = (
   const bishopTiles = getAvailableTilesForBishop(tile, tileToCover, tiles);
   const rookTiles = getAvailableTilesForRook(tile, tileToCover, tiles);
 
-  console.log(bishopTiles, rookTiles);
-
   return bishopTiles || rookTiles;
 };
 

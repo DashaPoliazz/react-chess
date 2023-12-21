@@ -13,7 +13,8 @@ type Props = {};
 
 // TODO:
 // [x] 1. King can move on the tile pawn can cover.
-// [] 2. Figure can't do turn if the check cames after it
+// [x] 2. Figure can't do turn if the check cames after it
+// [x]  3.  Figure the check come from can't be eated if it's covered
 
 const identity = (x: any) => x;
 
@@ -98,12 +99,6 @@ export const Board = (props: Props) => {
 
         const { availableMovesForKing, figuresCanSave, figuresToBlock } =
           availableTurnsToAvoidCheckMate(king, tiles, figureCheckFrom);
-
-        console.log(figureCheckFrom);
-        console.dir(
-          availableTurnsToAvoidCheckMate(king, tiles, figureCheckFrom)
-        );
-
         if (
           availableMovesForKing.length === 0 &&
           Object.keys(figuresCanSave).length === 0 &&
